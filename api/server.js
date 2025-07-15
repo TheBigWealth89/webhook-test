@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import crypto from "crypto";
+import redisService from "../service/redis.service.js";
 
 dotenv.config();
 const app = express();
@@ -37,6 +38,9 @@ app.post("/api/webhooks/github", verifyWebhookSignature, (req, res) => {
 
   res.status(200).send("Webhook received!");
 });
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+(async () => {
+  await redisService.connect();
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+  });
+})();
