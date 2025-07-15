@@ -31,12 +31,15 @@ app.get("/", (req, res) => {
   res.send("Webhook processor is running");
 });
 
-app.post("/api/webhooks/github", verifyWebhookSignature, (req, res) => {
-  console.log("🔔 Webhook received from GitHub!");
-  console.log("Event:", req.headers["x-github-event"]);
-  console.log("Payload:", req.body);
-
-  res.status(200).send("Webhook received!");
+app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
+  try {
+    await redisService.client.lPush("webhook_jobs", JSON.stringify(req.body));
+    console.log("🔔 Webhook queued:", req.headers["x-github-event"]);
+    res.status(202).send("Webhook queued for processing");
+  } catch (error) {
+    console.error("Error queuing webhook:", error);
+    res.status(500).send("Failed to queue webhook");
+  }
 });
 (async () => {
   await redisService.connect();
