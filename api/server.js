@@ -34,7 +34,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
   try {
-    await redisService.client.lPush("webhook_jobs", "invalid-json");
+    await redisService.client.lPush("webhook_jobs", JSON.stringify(req.body));
     logger.info("🔔 Webhook queued:", req.headers["x-github-event"]);
     res.status(202).send("Webhook queued for processing");
   } catch (error) {
