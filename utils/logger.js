@@ -5,7 +5,7 @@ import { dirname, join } from "path";
 // Recreate __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const logDir = join(__dirname, "..", "..", "logs");
+const logDir = join(__dirname, "..", "..", "logs")
 
 const levels = {
   error: 0,
@@ -54,7 +54,7 @@ const transports = [
   }),
 ];
 
-// **THE FIX**: Only add the Console transport if we are NOT in production
+// Only add the Console transport if we are NOT in production
 if (process.env.NODE_ENV !== "production") {
   transports.push(
     new winston.transports.Console({

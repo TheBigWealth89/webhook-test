@@ -8,6 +8,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 7000;
 
+//Capture the raw body for verification
+app.use(
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => {
+      // Store the raw buffer on the request object
+      req.rawBody = buf;
+    },
+  })
+);
+
 app.use(express.json());
 
 // Verify GitHub webhook signature
@@ -18,10 +29,11 @@ const verifyWebhookSignature = (req, res, next) => {
   }
 
   const hmac = crypto.createHmac("sha256", process.env.WEBHOOK_SECRET || "");
-  const digest = `sha256=${hmac
-    .update(JSON.stringify(req.body))
-    .digest("hex")}`;
-  if (signature !== digest) {
+    const digest = `sha256=${hmac.update(req.rawBody).digest("hex")}`;
+
+  //Compares the two signatures in a way that prevents timing attacks
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
+    logger.warn("Invalid webhook signature received.");
     return res.status(401).send("Invalid webhook signature");
   }
   next();
@@ -32,7 +44,7 @@ app.get("/", (req, res) => {
   res.send("Webhook processor is running");
 });
 
-app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
+app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
   try {
     // const payload = process.env.TEST_INVALID_JSON
     //   ? "invalid-json"
