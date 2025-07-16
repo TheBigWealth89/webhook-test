@@ -7,13 +7,13 @@ const startWorker = async () => {
     try {
       // Block until a job is available
       const job = await redisService.client.brPop("webhook_jobs", 0);
-      logger.info("Incoming jobs:", job)
-      const payload = JSON.parse(job.element);
+      logger.info("Incoming jobs:", job[1])
+      const payload = JSON.parse(job[1]);
       logger.info("Processing webhook payload:", payload);
       logger.info("Event:", payload.action || "unknown");
     } catch (error) {
       logger.error("Error processing job:", error);
-      await redisService.client.lPush("dead_letter_queue", job.element);
+      await redisService.client.lPush("dead_letter_queue", job[1]);
     }
   }
 };
