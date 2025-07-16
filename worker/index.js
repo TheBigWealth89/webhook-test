@@ -13,6 +13,7 @@ const startWorker = async () => {
       logger.info("Event:", payload.action || "unknown");
     } catch (error) {
       logger.error("Error processing job:", error);
+      await redisService.client.lPush("dead_letter_queue", job.element);
     }
   }
 };
