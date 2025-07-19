@@ -2,7 +2,7 @@ import redisService from "../service/redis.service.js";
 import logger from "../utils/logger.js";
 const startWorker = async () => {
   await redisService.connect();
-  console.log("✅ Worker started, waiting for jobs...");
+  logger.info("✅ Worker started, waiting for jobs...");
   while (true) {
     let job = null;
     try {
@@ -11,6 +11,7 @@ const startWorker = async () => {
       logger.info("Raw job", job);
       logger.info("Attempting to parse job.element:", { element: job.element });
       const payload = JSON.parse(job.element);
+      //I'll add database later
       logger.info("Processing webhook payload:", payload);
       logger.info("Event:", payload.action || "unknown");
     } catch (error) {

@@ -8,7 +8,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 7000;
 
-//Capture the raw body for verification
+// Capture the raw request body for secure signature validation.
 app.use(
   express.raw({
     type: "application/json",
@@ -44,7 +44,7 @@ app.get("/", (req, res) => {
   res.send("Webhook processor is running");
 });
 
-app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
+app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
   try {
     // const payload = process.env.TEST_INVALID_JSON
     //   ? "invalid-json"

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dead Letter Queue Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Dead Letter Queue Dashboard</h1>
+    <p>Queue Length: <%= queueLength %></p>
+    <% if (jobs.length === 0) { %>
+    <p>No jobs in dead_letter_queue</p>
+    <% } else { %>
+    <table>
+      <tr>
+        <th>Index</th>
+        <th>Payload</th>
+        <th>Error</th>
+        <th>Action</th>
+      </tr>
+      <% jobs.forEach(job => { %>
+      <tr>
+        <td><%= job.index %></td>
+        <td><pre><%= JSON.stringify(job.payload, null, 2) %></pre></td>
+        <td><%= job.error || 'None' %></td>
+        <td>
+          <form action="/retry-job/<%= job.index %>" method="POST">
+            <button type="submit">Retry</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+    </table>
+    <% } %>
+  </body>
+</html>
