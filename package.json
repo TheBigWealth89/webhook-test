@@ -6,10 +6,10 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node api/server.js",
     "start:worker": "cross-env NODE_ENV=production node worker/index.js",
-    "start:dashboard": "cross-env NODE_ENV=production node dashboard/server.js",
+    "start:dashboard": "cross-env NODE_ENV=production node dashboard/dashboard.js",
     "dev": "cross-env NODE_ENV=development node api/server.js",
     "dev:worker": "cross-env NODE_ENV=development node worker/index.js",
-    "dev:dashboard": "cross-env NODE_ENV=development node dashboard/server.js",
+    "dev:dashboard": "cross-env NODE_ENV=development node dashboard/dashboard.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
