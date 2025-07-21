@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import redisService from "../service/redis.service.js";
 import path from "path";
 import { fileURLToPath } from "url";
-
+import logger from "../utils/logger.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.DASHBOARD_PORT || 7001;
@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Serve static files (CSS) 
+// Serve static files (CSS)
 app.use(express.static(path.join(__dirname, "public")));
 
 // Parse form submissions
