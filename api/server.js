@@ -29,7 +29,7 @@ const verifyWebhookSignature = (req, res, next) => {
   }
 
   const hmac = crypto.createHmac("sha256", process.env.WEBHOOK_SECRET || "");
-    const digest = `sha256=${hmac.update(req.rawBody).digest("hex")}`;
+  const digest = `sha256=${hmac.update(req.rawBody).digest("hex")}`;
 
   //Compares the two signatures in a way that prevents timing attacks
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest))) {
@@ -46,12 +46,7 @@ app.get("/", (req, res) => {
 
 app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
   try {
-    // const payload = process.env.TEST_INVALID_JSON
-    //   ? "invalid-json"
-    //   : JSON.stringify(req.body);
-
-      const payloadString = req.body.toString('utf8');
-
+    const payloadString = req.body.toString("utf8");
     await redisService.client.lPush("webhook_jobs", payloadString);
     logger.info("🔔 Webhook queued:", req.headers["x-github-event"]);
     res.status(202).send("Webhook queued for processing");
@@ -60,6 +55,7 @@ app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
     res.status(500).send("Failed to queue webhook");
   }
 });
+
 (async () => {
   await redisService.connect();
   app.listen(PORT, () => {
