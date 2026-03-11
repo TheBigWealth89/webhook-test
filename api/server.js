@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import crypto from "crypto";
-import redisService from "../service/redis.service.js";
+import { redisClient } from "../db/connections.js";
 import logger from "../utils/logger.js";
 
 dotenv.config();
@@ -16,7 +16,7 @@ app.use(
       // Store the raw buffer on the request object
       req.rawBody = buf;
     },
-  })
+  }),
 );
 
 app.use(express.json());
@@ -44,10 +44,10 @@ app.get("/", (req, res) => {
   res.send("Webhook processor is running");
 });
 
-app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
+app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
   try {
     const payloadString = req.body.toString("utf8");
-    await redisService.client.lPush("webhook_jobs", payloadString);
+    await redisClient.lPush("webhook_jobs", payloadString);
     logger.info("🔔 Webhook queued:", req.headers["x-github-event"]);
     res.status(202).send("Webhook queued for processing");
   } catch (error) {
@@ -57,7 +57,8 @@ app.post("/api/webhooks/github",verifyWebhookSignature, async (req, res) => {
 });
 
 (async () => {
-  await redisService.connect();
+  await redisClient.connect();
+
   app.listen(PORT, () => {
     console.log(`✅ Server running on http://localhost:${PORT}`);
   });

@@ -9,7 +9,7 @@
   <body>
     <h1>Dead Letter Queue Dashboard</h1>
     <p>Queue Length: <%= queueLength %></p>
-    <% if (jobs.length === 0) { %>
+    <% if (jobs.length === 0) {   
     <p>No jobs in dead_letter_queue</p>
     <% } else { %>
     <table>
