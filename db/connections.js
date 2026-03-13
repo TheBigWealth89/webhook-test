@@ -1,6 +1,8 @@
 import redis from "ioredis";
+import "dotenv/config";
 
 const redisUrl = process.env.REDIS_URL;
+console.log("🔗 Redis URL:", redisUrl);
 
 export const redisClient = new redis(redisUrl, {
   maxRetriesPerRequest: null,
@@ -12,7 +14,7 @@ export const redisClient = new redis(redisUrl, {
 });
 
 redisClient.on("connect", () =>
-  console.log("✅ Redis status:", redisClient.status),
+  console.log("connecting to Redis at", redisUrl),
 );
 redisClient.on("ready", () => console.log("✅ Redis client is ready to use"));
 redisClient.on("end", () => console.warn("🔌 Redis connection closed"));
@@ -24,12 +26,12 @@ export const connectToRedis = async () => {
   if (isConnected) return;
   try {
     if (redisClient.status !== "ready") {
-      console.log(" Waiting for Redis connection...");
+      console.log("⏳ Waiting for Redis connection...");
     }
     console.log("✅ Connected to Redis successfully:", redisClient.status);
     isConnected = true;
   } catch (err) {
     isConnected = false;
-    console.error("❌ Failed to connect to Redis ", err);
+    throw err;
   }
 };
