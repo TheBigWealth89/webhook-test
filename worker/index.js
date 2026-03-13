@@ -1,13 +1,12 @@
-import redisService from "../service/redis.service.js";
+import { redisClient } from "../db/connections.js";
 import logger from "../utils/logger.js";
 const startWorker = async () => {
-  await redisService.connect();
   logger.info("✅ Worker started, waiting for jobs...");
   while (true) {
     let job = null;
     try {
       // Block until a job is available
-      job = await redisService.client.brPop("webhook_jobs", 0);
+      job = await redisClient.brPop("webhook_jobs", 0);
       logger.info("Raw job", job);
       logger.info("Attempting to parse job.element:", { element: job.element });
       const payload = JSON.parse(job.element);
@@ -25,9 +24,9 @@ const startWorker = async () => {
             stack: error.stack, // The full error stack for deep debugging
             failedAt: new Date().toISOString(), // When it failed
           };
-          await redisService.client.lPush(
+          await redisClient.lPush(
             "dead_letter_queue",
-            JSON.stringify(failedJob)
+            JSON.stringify(failedJob),
           );
           logger.info("Pushed to dead_letter_queue:", failedJob);
         } catch (dlqError) {
