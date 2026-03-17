@@ -1,7 +1,10 @@
 import { redisClient } from "../db/connections.js";
 import logger from "../utils/logger.js";
+
 const startWorker = async () => {
-  logger.info("✅ Worker started, waiting for jobs...");
+  logger.info("Worker started, waiting for jobs...");
+
+  // Infinite loop to continuously process jobs
   while (true) {
     let job = null;
     try {

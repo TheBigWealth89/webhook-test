@@ -90,9 +90,9 @@ app.post("/retry-job/:index", async (req, res) => {
 
 (async () => {
   try {
-    console.log("✅ Redis connected for dashboard");
+    console.log("Redis connected for dashboard");
     app.listen(PORT, () => {
-      console.log(`✅ Dashboard running on http://localhost:${PORT}`);
+      console.log(`Dashboard running on http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start dashboard:", error.message);
