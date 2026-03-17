@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import crypto from "crypto";
-import { connectToRedis } from "../db/connections.js";
+import { connectToRedis, redisClient } from "../db/connections.js";
 import logger from "../utils/logger.js";
 
 dotenv.config();

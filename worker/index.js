@@ -11,8 +11,8 @@ const startWorker = async () => {
       // Block until a job is available
       job = await redisClient.brpop("webhook_jobs", 0);
       logger.info("Raw job", job);
-      logger.info("Attempting to parse job.element:", { element: job.element });
-      const payload = JSON.parse(job.element);
+      logger.info("Attempting to parse job value:", { value: job[1] });
+      const payload = JSON.parse(job[1]);
       //I'll add database later
       logger.info("Processing webhook payload:", payload);
       logger.info("Event:", payload.action || "unknown");
@@ -22,7 +22,7 @@ const startWorker = async () => {
       if (job) {
         try {
           const failedJob = {
-            payload: job.element,
+            payload: job[1],
             error: error.message, // The reason it failed!
             stack: error.stack, // The full error stack for deep debugging
             failedAt: new Date().toISOString(), // When it failed
@@ -36,7 +36,7 @@ const startWorker = async () => {
           logger.error("!!! CRITICAL: FAILED TO PUSH TO DLQ !!!", {
             originalError: error.message,
             dlqError: dlqError.message,
-            jobElement: job.element,
+            jobValue: job[1],
           });
         }
       } else {

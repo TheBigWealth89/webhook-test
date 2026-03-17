@@ -1,13 +1,12 @@
 import express from "express";
 import dotenv from "dotenv";
-import redisService from "../service/redis.service.js";
+import { redisClient } from "../db/connections.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import logger from "../utils/logger.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.DASHBOARD_PORT || 7001;
-await redisService.connect();
 
 // Set up EJS
 const __filename = fileURLToPath(import.meta.url);
@@ -24,8 +23,8 @@ app.use(express.urlencoded({ extended: true }));
 // Dashboard route
 app.get("/dashboard", async (req, res) => {
   try {
-    const length = await redisService.client.lLen("dead_letter_queue");
-    const jobs = await redisService.client.lRange("dead_letter_queue", 0, -1);
+    const length = await redisClient.llen("dead_letter_queue");
+    const jobs = await redisClient.lrange("dead_letter_queue", 0, -1);
     const jobDetails = jobs.map((jobString, index) => {
       try {
         const jobData = JSON.parse(jobString);
@@ -56,24 +55,20 @@ app.get("/dashboard", async (req, res) => {
 app.post("/retry-job/:index", async (req, res) => {
   const index = parseInt(req.params.index, 10);
   try {
-    const length = await redisService.client.lLen("dead_letter_queue");
+    const length = await redisClient.llen("dead_letter_queue");
     if (isNaN(index) || index < 0 || index >= length) {
       return res.status(400).send(`Invalid job index: ${index}`);
     }
 
     //Get the job's value at the index
-    const jobs = await redisService.client.lRange(
-      "dead_letter_queue",
-      index,
-      index
-    );
+    const jobs = await redisClient.lrange("dead_letter_queue", index, index);
     if (!jobs || jobs.length === 0) {
       return res.status(404).send(`No job found at index: ${index}`);
     }
     const jobToRetry = jobs[0];
 
     // Use a transaction to ensure the job is moved and removed atomically.
-    const multi = redisService.client.multi();
+    const multi = redisClient.multi();
     multi.lPush("webhook_jobs", jobToRetry); // Add to main queue
     multi.lRem("dead_letter_queue", 1, jobToRetry); // Remove from DLQ
     await multi.exec(); // Execute atomically
@@ -90,7 +85,6 @@ app.post("/retry-job/:index", async (req, res) => {
 
 (async () => {
   try {
-    console.log("Redis connected for dashboard");
     app.listen(PORT, () => {
       console.log(`Dashboard running on http://localhost:${PORT}`);
     });
