@@ -10,7 +10,8 @@
     "dev": "cross-env NODE_ENV=development node api/server.js",
     "dev:worker": "cross-env NODE_ENV=development node worker/index.js",
     "dev:dashboard": "cross-env NODE_ENV=development node dashboard/dashboard.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/**/*.test.js",
+    "test:watch": "node --test --watch tests/**/*.test.js"
   },
   "repository": {
     "type": "git",
@@ -33,6 +34,7 @@
     "yargs": "^18.0.0"
   },
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0"
   }
 }

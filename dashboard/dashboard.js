@@ -24,20 +24,32 @@ app.use(express.urlencoded({ extended: true }));
 // Dashboard route
 app.get("/dashboard", async (req, res) => {
   try {
+    const pageSize = 10;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+
     const length = await redisClient.llen("dead_letter_queue");
-    const jobs = await redisClient.lrange("dead_letter_queue", 0, -1);
-    const jobDetails = jobs.map((jobString, index) => {
+    const totalPages = Math.max(1, Math.ceil(length / pageSize));
+
+    // Calculate start/end indexes for redis lrange (0-based list)
+    const start = (page - 1) * pageSize;
+    const end = Math.min(length - 1, start + pageSize - 1);
+
+    const jobs =
+      start <= end
+        ? await redisClient.lrange("dead_letter_queue", start, end)
+        : [];
+
+    const jobDetails = jobs.map((jobString, idx) => {
+      const index = start + idx; // global index in the list
       try {
         const jobData = JSON.parse(jobString);
-        // It's an enriched object, return its details
         return {
           index,
-          payload: JSON.stringify(jobData.payload, null, 2), // Print the inner payload
+          payload: jobData.payload, // keep as object for JSON.stringify in the view
           error: jobData.error,
           failedAt: jobData.failedAt,
         };
       } catch (e) {
-        // It's just a raw string, not enriched object
         return {
           index,
           payload: jobString,
@@ -46,7 +58,13 @@ app.get("/dashboard", async (req, res) => {
         };
       }
     });
-    res.render("dashboard", { jobs: jobDetails, queueLength: length });
+
+    res.render("dashboard", {
+      jobs: jobDetails,
+      queueLength: length,
+      currentPage: page,
+      totalPages,
+    });
   } catch (error) {
     res.status(500).send(`Error fetching dead_letter_queue: ${error.message}`);
   }
@@ -75,7 +93,7 @@ app.post("/retry-job/:index", async (req, res) => {
     await multi.exec(); // Execute atomically
 
     logger.info(`Retried job from DLQ index ${index} via dashboard.`);
-    res.redirect("/dashboard");
+    res.redirect(`/dashboard?page=${req.query.page || 1}`);
   } catch (error) {
     logger.error("Error retrying job from dashboard:", {
       error: error.message,
