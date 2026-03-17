@@ -4,6 +4,7 @@ import { redisClient } from "../db/connections.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import logger from "../utils/logger.js";
+
 dotenv.config();
 const app = express();
 const PORT = process.env.DASHBOARD_PORT || 7001;
