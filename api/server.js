@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 7000;
 // Capture the raw request body for secure signature validation.
 app.use(
   express.raw({
-    type: "application/json",
+    type: ["application/json"],
     verify: (req, res, buf) => {
       // Store the raw buffer on the request object
       req.rawBody = buf;
@@ -23,10 +23,18 @@ app.use(express.json());
 
 // Verify GitHub webhook signature
 const verifyWebhookSignature = (req, res, next) => {
+  console.log(req.headers["content-type"]);
   const signature = req.headers["x-hub-signature-256"];
+
   if (!signature) {
     return res.status(401).send("Missing X-Hub-Signature-256 header");
   }
+  // Ensure the raw body is available for signature verification
+  if (!req.rawBody) {
+    return res.status(400).send("Missing raw body");
+  }
+
+  // console.log("Received webhook with raw body:", req.rawBody.toString())
 
   const hmac = crypto.createHmac("sha256", process.env.WEBHOOK_SECRET || "");
   const digest = `sha256=${hmac.update(req.rawBody).digest("hex")}`;

@@ -28,6 +28,7 @@ test("GitHub Webhook Signature Verification", async (t) => {
     // Verify it's in correct format
     const res = await request(app)
       .post("/api/webhooks/github")
+      .set("Content-Type", "application/json")
       .set("X-Hub-Signature-256", expectedSignature)
       .send(rawBody);
 
