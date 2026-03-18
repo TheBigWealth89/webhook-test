@@ -5,7 +5,7 @@ import { connectToRedis, redisClient } from "../db/connections.js";
 import logger from "../utils/logger.js";
 
 dotenv.config();
-const app = express();
+export const app = express();
 const PORT = process.env.PORT || 7000;
 
 // Capture the raw request body for secure signature validation.

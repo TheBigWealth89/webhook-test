@@ -2,15 +2,18 @@
  * Webhook API Tests - GitHub webhook delivery and processing
  * Run with: npm test
  */
-
+import "dotenv/config";
 import test from "node:test";
 import assert from "node:assert";
 import crypto from "crypto";
+import { app } from "../api/server.js";
+import request from "supertest";
 
-const WEBHOOK_SECRET = "test-webhook-secret";
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 
+// Note: These tests focus on the webhook processing logic and signature verification.
 test("GitHub Webhook Signature Verification", async (t) => {
-  await t.test("Should verify webhook with valid signature", () => {
+  await t.test("Should verify webhook with valid signature", async () => {
     const payload = {
       action: "push",
       repository: { name: "test-repo" },
@@ -18,16 +21,23 @@ test("GitHub Webhook Signature Verification", async (t) => {
     };
 
     const rawBody = JSON.stringify(payload);
+
     const hmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
     const expectedSignature = `sha256=${hmac.update(rawBody).digest("hex")}`;
 
     // Verify it's in correct format
-    assert.ok(expectedSignature.match(/^sha256=[a-f0-9]{64}$/));
-    console.log("✓ Valid signature format confirmed");
+    const res = await request(app)
+      .post("/api/webhooks/github")
+      .set("X-Hub-Signature-256", expectedSignature)
+      .send(rawBody);
+
+    assert.strictEqual(res.statusCode, 202);
+    console.log("✓ Valid signature accepted → HTTP 202");
   });
 
+  // Test cases for invalid signatures, missing headers, and timing attack prevention in signature comparison.
   await t.test("Should reject webhook with invalid signature", () => {
-    const payload = { action: "push" };
+    const payload = { action: "push", repository: { name: "test-repo" } };
     const rawBody = JSON.stringify(payload);
 
     const correctHmac = crypto.createHmac("sha256", WEBHOOK_SECRET);
@@ -40,6 +50,7 @@ test("GitHub Webhook Signature Verification", async (t) => {
     console.log("✗ Invalid signature correctly rejected");
   });
 
+  // Test missing signature header
   await t.test("Should reject webhook missing signature header", () => {
     const headers = {
       "content-type": "application/json",
@@ -52,6 +63,7 @@ test("GitHub Webhook Signature Verification", async (t) => {
     console.log("✗ Missing signature header detected");
   });
 
+  // Test timing attack prevention in signature comparison - ensure it takes similar time regardless of how much of the signature matches.
   await t.test("Should prevent timing attacks in signature comparison", () => {
     const payload = JSON.stringify({ action: "push" });
 
@@ -86,8 +98,11 @@ test("GitHub Webhook Signature Verification", async (t) => {
   });
 });
 
+/**
+   Note: The following tests are deigned to validate the logic of webhook processing and error handling. 
+ */
 test("Successful Webhook Deliveries", async (t) => {
-  await t.test("Should queue push event (201/202 response)", () => {
+  await t.test("Should queue push event (201/202 response)", async () => {
     const payload = {
       action: "push",
       ref: "refs/heads/main",
@@ -105,15 +120,23 @@ test("Successful Webhook Deliveries", async (t) => {
       ],
     };
 
-    // Simulate successful queueing
-    const statusCode = 202; // Accepted (async processing)
-    const response = "Webhook queued for processing";
+    const rawBody = JSON.stringify(payload);
+    const hamc = crypto.createHmac("sha256", WEBHOOK_SECRET);
+    const signature = `sha256=${hamc.update(rawBody).digest("hex")}`;
 
-    assert.strictEqual(statusCode, 202);
-    assert.strictEqual(response, "Webhook queued for processing");
-    console.log("✓ Push event queued → HTTP 202");
+    const res = await request(app)
+      .post("/api/webhooks/github")
+      .set("X-Hub-Signature-256", signature)
+      .set("Content-Type", "application/json")
+      .send(rawBody);
+
+    assert.strictEqual(res.statusCode, 202);
+    console.log("✓ Push event queued successfully → HTTP 202");
   });
 
+  /* Test cases for pull request, issues, release, repository, member events with different payloads 
+        to ensure all event types are handled correctly.
+  */
   await t.test("Should queue pull request event", () => {
     const payload = {
       action: "opened",
@@ -195,6 +218,7 @@ test("Successful Webhook Deliveries", async (t) => {
   });
 });
 
+// Test cases for failed deliveries - Redis connection failure, corrupted payload, timeout, and error logging.
 test("Failed Webhook Deliveries", async (t) => {
   await t.test("Should handle Redis connection failure (500 response)", () => {
     const error = new Error("ECONNREFUSED: Connection refused to Redis");
@@ -253,6 +277,7 @@ test("Failed Webhook Deliveries", async (t) => {
   });
 });
 
+// Test cases for API health/status endpoint - ensure it returns correct status and server info
 test("Webhook Event Types", async (t) => {
   await t.test("Should process push event", () => {
     const event = {
@@ -342,6 +367,7 @@ test("API Health and Status", async (t) => {
   });
 });
 
+// Test cases for security - validate payload, sanitize logs, prevent ReDoS in signature verification, and ensure no sensitive info is logged.
 test("Webhook Security", async (t) => {
   await t.test("Should validate webhook payload before queuing", () => {
     const payload = {
@@ -377,7 +403,6 @@ test("Webhook Security", async (t) => {
 
   await t.test("Should prevent ReDoS in signature verification", () => {
     const maliciousRegex = "a".repeat(1000) + "x";
-    const normalSignature = "sha256=abc123def456";
 
     // Create proper valid signature
     const validSignature = "sha256=" + "a".repeat(64);
