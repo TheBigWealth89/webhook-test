@@ -33,8 +33,9 @@ This system decouples the initial ingestion of a webhook from its final processi
 ## 🛠️ Tech Stack
 
 - **Backend:** Node.js, Express.js
-- **Queuing / Caching:** Redis
+- **Queuing / Caching:** ioredis
 - **Dashboard:** EJS (Embedded JavaScript Templates)
+- **Testing:** Node.js built-in test runner
 - **Tooling:** Winston (for logging), yargs (for CLI), `dotenv`, `cross-env`
 
 ---
@@ -65,12 +66,11 @@ Follow these instructions to get the project running on your local machine.
     ```
 
 3.  **Set up environment variables:**
-
     - Create a `.env` file in the root of the project.
-    - Add your GitHub webhook `WEBHOOK_SECRET`.
+    - You can use `.env.example` as a template for required variables.
+    - Add your GitHub webhook `WEBHOOK_SECRET` and other necessary configuration.
 
 4.  **Run the application for development:**
-
     - Open three separate terminals.
     - Terminal 1 (API Server): `npm run dev`
     - Terminal 2 (Worker): `npm run dev:worker`
@@ -116,3 +116,40 @@ The interactive CLI allows you to manage the DLQ from your terminal.
   ```bash
   node scripts/inspect-dead-queue.js --flush
   ```
+
+### Testing Bad Jobs
+
+To test the system's resilience with bad jobs, use the push bad job script:
+
+```bash
+node scripts/push-bad-job.js
+```
+
+This will inject a malformed job into the queue for testing error handling and DLQ functionality.
+
+---
+
+## 🧪 Testing
+
+The project includes comprehensive tests using Node's built-in test runner to verify the webhook processor's functionality:
+
+**Run tests once:**
+
+```bash
+npm test
+```
+
+**Run tests in watch mode:**
+
+```bash
+npm run test:watch
+```
+
+Tests cover:
+
+- Webhook signature validation
+- Job queue processing
+- Worker reliability
+- Error handling and Dead-Letter Queue behavior
+
+Test files are located in the `tests/` directory.
