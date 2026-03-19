@@ -8,9 +8,9 @@ export const redisClient = new redis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   // rejectUnauthorized is not a valid option at this level, move to tls
-  //   tls: redisUrl.startsWith("rediss://")
-  //     ? { rejectUnauthorized: false }
-  //     : undefined,
+    tls: redisUrl.startsWith("rediss://")
+      ? { rejectUnauthorized: false }
+      : undefined,
 });
 
 redisClient.on("connect", () =>
