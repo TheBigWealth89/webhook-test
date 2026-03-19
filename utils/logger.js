@@ -5,7 +5,7 @@ import { dirname, join } from "path";
 // Recreate __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const logDir = join(__dirname, "..", "..", "logs")
+const logDir = join(__dirname, "..", "..", "logs");
 
 const levels = {
   error: 0,
@@ -16,11 +16,11 @@ const levels = {
 };
 
 const colors = {
-  error: 'red',
-  warn: 'yellow',
-  info: 'green',
-  http: 'magenta',
-  debug: 'white',
+  error: "red",
+  warn: "yellow",
+  info: "green",
+  http: "magenta",
+  debug: "white",
 };
 
 winston.addColors(colors);
@@ -28,16 +28,13 @@ winston.addColors(colors);
 // This format is much better for the console
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-  winston.format.colorize({ all: true }), // Colorize the entire log message
-  winston.format.printf(
-    (info) => `${info.timestamp} [${info.level}]: ${info.message}`
-  )
+  winston.format.printf((info) => JSON.stringify(info, null, 2)),
 );
 
 // This format is better for files (JSON is standard)
 const fileFormat = winston.format.combine(
   winston.format.timestamp(),
-  winston.format.json() // Log as JSON in files
+  winston.format.printf((info) => JSON.stringify(info, null, 2)),
 );
 
 const transports = [
@@ -58,9 +55,9 @@ const transports = [
 if (process.env.NODE_ENV !== "production") {
   transports.push(
     new winston.transports.Console({
-      level: 'debug', // Log everything to the console in dev
+      level: "debug", // Log everything to the console in dev
       format: consoleFormat,
-    })
+    }),
   );
 }
 

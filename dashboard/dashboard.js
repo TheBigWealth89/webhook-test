@@ -88,8 +88,8 @@ app.post("/retry-job/:index", async (req, res) => {
 
     // Use a transaction to ensure the job is moved and removed atomically.
     const multi = redisClient.multi();
-    multi.lPush("webhook_jobs", jobToRetry); // Add to main queue
-    multi.lRem("dead_letter_queue", 1, jobToRetry); // Remove from DLQ
+    multi.lpush("webhook_jobs", jobToRetry); // Add to main queue
+    multi.lrem("dead_letter_queue", 1, jobToRetry); // Remove from DLQ
     await multi.exec(); // Execute atomically
 
     logger.info(`Retried job from DLQ index ${index} via dashboard.`);
