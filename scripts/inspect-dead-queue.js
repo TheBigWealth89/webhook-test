@@ -1,9 +1,9 @@
-import redisService from "../service/redis.service.js";
+import { redisClient } from "../db/connections.js";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import logger from "../utils/logger.js";
 
-await redisService.connect();
+const redisService = { client: redisClient };
 const argv = yargs(hideBin(process.argv))
   .option("view", {
     type: "boolean",

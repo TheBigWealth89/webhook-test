@@ -55,7 +55,15 @@ app.get("/", (req, res) => {
 app.post("/api/webhooks/github", verifyWebhookSignature, async (req, res) => {
   try {
     const payloadString = req.body.toString("utf8");
-    await redisClient.lpush("webhook_jobs", payloadString);
+    // Wrap the payload in a job object with retry metadata
+    const jobData = {
+      payload: payloadString,
+      retryCount: 0,
+      maxRetries: 5,
+    };
+
+    // Push the wrapped job to the main queue
+    await redisClient.lpush("webhook_jobs", JSON.stringify(jobData));
     logger.info("Webhook queued:", req.headers["x-github-event"]);
     res.status(202).send("Webhook queued for processing");
   } catch (error) {
