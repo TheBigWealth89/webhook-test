@@ -70,7 +70,7 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
-// Retry job route
+// Retry job route - moves job back to main queue and removes from DLQ
 app.post("/retry-job/:index", async (req, res) => {
   const index = parseInt(req.params.index, 10);
   try {
