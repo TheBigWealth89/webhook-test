@@ -1,7 +1,7 @@
 import { redisClient } from "../db/connections.js";
 
 const blockingRedisClient = redisClient.duplicate();
-
+// We want a separate client for blocking operations to avoid interfering with other commands
 const QUEUES = {
   MAIN: "webhook_jobs",
   DELAYED: "delayed_webhook_jobs",
