@@ -12,6 +12,7 @@ const pushInvalidJson = async () => {
     "Redis client status before push:",
     redisClient && redisClient.status,
   );
+  // This will cause JSON.parse to throw an error in the worker
   await redisClient.lpush("webhook_jobs", "this is not json");
   logger.info("Pushed malformed job to webhook_jobs: (invalid JSON)");
 };
@@ -23,6 +24,7 @@ const pushBadPayload = async () => {
     "Redis client status before push:",
     redisClient && redisClient.status,
   );
+  // Note: the worker expects certain fields in the payload, so this may cause it to throw an error when processing
   await redisClient.lpush("webhook_jobs", JSON.stringify(payload));
   logger.info("Pushed malformed job to webhook_jobs: (bad payload)");
 };
@@ -31,6 +33,7 @@ const main = async () => {
   const type = process.argv[2] || "invalid-json";
   try {
     if (type === "invalid-json") {
+      // This will cause JSON.parse to throw an error in the worker
       await pushInvalidJson();
     } else if (type === "bad-payload") {
       await pushBadPayload();

@@ -85,10 +85,10 @@ const inspectDeadLetterQueue = async () => {
       const multi = redisService.client.multi();
 
       //Push the job back to the main queue.
-      multi.lPush("webhook_jobs", jobToRetry);
+      multi.lpush("webhook_jobs", jobToRetry);
 
       //Remove exactly 1 instance of that job from the DLQ.
-      multi.lRem("dead_letter_queue", 1, jobToRetry);
+      multi.lrem("dead_letter_queue", 1, jobToRetry);
 
       const transactionResult = await multi.exec();
 
