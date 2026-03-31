@@ -29,9 +29,10 @@ const startWorker = async () => {
       if (!rawJobString) continue;
 
       logger.info("Attempting to parse job value:", { value: rawJobString });
+      console.log("Attempting to parse job value:", { value: rawJobString });
 
       // First, parse the top-level string.
-      // This is either our new wrapped job from API, or raw JSON from scripts.
+      // This is either our new wrapped job from API,n or raw JSON from scripts.
       let rawData;
       try {
         rawData = JSON.parse(rawJobString);
@@ -49,10 +50,10 @@ const startWorker = async () => {
       jobData = isWrapped
         ? rawData
         : {
-            payload: rawData, // It was an unwrapped payload (like from the push bad job script)
-            retryCount: 0,
-            maxRetries: 5,
-          };
+          payload: rawData, // It was an unwrapped payload (like from the push bad job script)
+          retryCount: 0,
+          maxRetries: 5,
+        };
 
       // Extract the actual inner payload (API sends it as a stringified JSON body)
       parsedPayload =
@@ -62,6 +63,7 @@ const startWorker = async () => {
 
       logger.info("Processing webhook payload:", parsedPayload);
       logger.info("Event:", parsedPayload.action || "unknown");
+      console.log("Event:", parsedPayload.action || "unknown");
 
       // FOR TESTING PURPOSES ONLY: Simulate process failure if `bad-payload` test script was used
       if (parsedPayload && parsedPayload.not_expected_field) {
@@ -71,6 +73,7 @@ const startWorker = async () => {
       // Normally we would save to DB or do some complex work here.
     } catch (error) {
       logger.error("Error processing job:", error.message);
+      console.log("Error processing job:", error.message);
 
       if (jobData) {
         try {
@@ -78,6 +81,10 @@ const startWorker = async () => {
           await retryLogic.handleFailure(jobData, error, queueService);
         } catch (retryError) {
           logger.error("!!! CRITICAL: FAILED TO ROUTE FAILURE TO RETRY/DLQ !!!", {
+            originalError: error.message,
+            retryError: retryError.message,
+          });
+          console.error("!!! CRITICAL: FAILED TO ROUTE FAILURE TO RETRY/DLQ !!!", {
             originalError: error.message,
             retryError: retryError.message,
           });
