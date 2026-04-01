@@ -30,13 +30,71 @@ This system decouples the initial ingestion of a webhook from its final processi
 
 ---
 
+## 🔄 Retry Logic & Reliability
+
+The system handles both transient and permanent failures using a multi-stage recovery strategy:
+
+| Stage | Behaviour |
+|---|---|
+| **1st – 5th failure** | Job is re-queued with exponential backoff delay (`1s → 2s → 4s → 8s → 16s`) |
+| **After 5 failures** | Job is moved permanently to the Dead-Letter Queue (DLQ) |
+| **DLQ recovery** | Operator manually retries from Dashboard or CLI after fixing root cause |
+
+- **Exponential Backoff formula:** `baseDelay (1s) × 2^retryCount`
+- **Delayed queue:** Failed jobs are stored in a Redis sorted set (`delayed_webhook_jobs`) scored by their next execution timestamp. A background poller running every 1 second promotes them back to the main queue when ready.
+- **Atomic moves:** All job transitions use Redis `MULTI`/`EXEC` transactions to prevent race conditions or double-processing.
+
+---
+
 ## 🛠️ Tech Stack
 
-- **Backend:** Node.js, Express.js
-- **Queuing / Caching:** ioredis
-- **Dashboard:** EJS (Embedded JavaScript Templates)
-- **Testing:** Node.js built-in test runner
-- **Tooling:** Winston (for logging), yargs (for CLI), `dotenv`, `cross-env`
+| Layer | Technology |
+|---|---|
+| **Runtime** | Node.js 20 LTS |
+| **API Framework** | Express.js v5 |
+| **Queue / Cache** | Redis (ioredis v5) |
+| **Dashboard** | EJS (Embedded JavaScript Templates) |
+| **Logging** | Winston (file + console transports) |
+| **CLI** | yargs |
+| **Containerisation** | Docker, Docker Compose |
+| **Testing** | Node.js built-in test runner |
+| **Tooling** | `dotenv`, `cross-env` |
+
+---
+
+## 📁 Project Structure
+
+```
+webhook-test/
+├── api/
+│   ├── server.js           # Express API — ingests webhooks, validates HMAC signature
+│   └── Dockerfile          # API service container
+├── worker/
+│   ├── index.js            # Background worker — consumes queue, handles retries
+│   └── Dockerfile          # Worker service container
+├── dashboard/
+│   ├── dashboard.js        # Express dashboard — DLQ visibility & retry UI
+│   ├── views/              # EJS templates
+│   ├── public/             # Static CSS assets
+│   └── Dockerfile          # Dashboard service container
+├── db/
+│   └── connections.js      # Redis client and connection management
+├── utils/
+│   ├── queueService.js     # Queue abstraction (push, pop, delayed, DLQ)
+│   ├── retryLogic.js       # Exponential backoff and failure routing
+│   └── logger.js           # Winston structured logger
+├── scripts/
+│   ├── push-bad-job.js     # Inject test jobs into the queue
+│   └── inspect-dead-queue.js # CLI tool to manage the DLQ
+├── tests/
+│   ├── webhook.test.js     # API & signature validation tests
+│   └── worker.test.js      # Worker reliability & retry logic tests
+├── .env                    # Local environment variables (not committed)
+├── .docker.env             # Docker-specific environment variables (not committed)
+├── .env.example            # Template for environment setup
+├── docker-compose.yml      # Orchestrates all services + Redis
+└── package.json
+```
 
 ---
 
@@ -47,48 +105,71 @@ Follow these instructions to get the project running on your local machine.
 ### Prerequisites
 
 - Node.js (v18 or later recommended)
-- An active Redis instance
+- Docker & Docker Compose (Recommended for easy setup)
+- An active Redis instance (if running locally without Docker)
 - `ngrok` (for exposing your local server to GitHub for testing)
 
-### Installation & Setup
+### 🐳 Docker Setup (Recommended)
+
+The easiest way to get started is using Docker and Docker Compose. This sets up all services (API, Worker, Dashboard) and a local Redis instance automatically.
 
 1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/TheBigWealth89/webhook-test.git
+    cd webhook-test
+    ```
 
+2.  **Start the system:**
+    ```bash
+    docker-compose up --build
+    ```
+
+3.  **Access the services:**
+    - **API Server:** [http://localhost:8000](http://localhost:8000)
+    - **Dashboard UI:** [http://localhost:8001/dashboard](http://localhost:8001/dashboard)
+    - **Redis:** `localhost:6379`
+
+> [!NOTE]
+> The Docker environment uses its own `.docker.env` file. To run local scripts (like `push-bad-job.js`) against the Docker Redis, use:
+> `$env:REDIS_URL="redis://localhost:6379"; node scripts/push-bad-job.js`
+
+---
+
+### 💻 Manual Local Setup
+
+If you prefer to run the services individually without Docker:
+
+1.  **Clone the repository:**
     ```bash
     git clone https://github.com/TheBigWealth89/webhook-test.git
     cd webhook-test
     ```
 
 2.  **Install dependencies:**
-
     ```bash
     npm install
     ```
 
 3.  **Set up environment variables:**
     - Create a `.env` file in the root of the project.
-    - You can use `.env.example` as a template for required variables.
-    - Add your GitHub webhook `WEBHOOK_SECRET` and other necessary configuration.
+    - Use `.env.example` as a template.
+    - Add your `WEBHOOK_SECRET` and `REDIS_URL`.
 
-4.  **Run the application for development:**
-    - Open three separate terminals.
-    - Terminal 1 (API Server): `npm run dev`
+4.  **Run the application:**
+    - Open three separate terminals:
+    - Terminal 1 (API): `npm run dev` (Port 7000)
     - Terminal 2 (Worker): `npm run dev:worker`
-    - Terminal 3 (Dashboard): `npm run dev:dashboard`
+    - Terminal 3 (Dashboard): `npm run dev:dashboard` (Port 7001)
 
 5.  **Expose your local API server:**
-
     ```bash
-    ngrok http 7000
+    ngrok http 7000  # Or 8000 if using Docker
     ```
 
-    _(Use the port your API server is running on)_
-
 6.  **Configure the GitHub Webhook:**
-    - In your GitHub repo's Settings > Webhooks, create a new webhook.
-    - Use the ngrok URL for the "Payload URL".
-    - Set the Content Type to `application/json`.
-    - Enter the same secret you used in your `.env` file.
+    - In GitHub repo Settings > Webhooks, use the ngrok URL for the "Payload URL".
+    - Set Content Type to `application/json`.
+    - Enter the same secret used in your `.env` or `.docker.env`.
 
 ---
 
@@ -119,37 +200,63 @@ The interactive CLI allows you to manage the DLQ from your terminal.
 
 ### Testing Bad Jobs
 
-To test the system's resilience with bad jobs, use the push bad job script:
+Inject test jobs into the queue to verify the worker's error handling and retry behaviour:
 
-```bash
-node scripts/push-bad-job.js
-```
+- **Push an invalid JSON string** (causes `JSON.parse` to throw in the worker):
+  ```bash
+  node scripts/push-bad-job.js invalid-json
+  ```
+- **Push a structurally bad payload** (parses fine, but fails worker validation):
+  ```bash
+  node scripts/push-bad-job.js bad-payload
+  ```
 
-This will inject a malformed job into the queue for testing error handling and DLQ functionality.
+> When running against the Docker stack, prefix with the Redis URL:
+> ```powershell
+> $env:REDIS_URL="redis://localhost:6379"; node scripts/push-bad-job.js bad-payload
+> ```
 
 ---
 
 ## 🧪 Testing
 
-The project includes comprehensive tests using Node's built-in test runner to verify the webhook processor's functionality:
+The project includes comprehensive tests using Node's built-in test runner.
 
 **Run tests once:**
-
 ```bash
 npm test
 ```
 
 **Run tests in watch mode:**
-
 ```bash
 npm run test:watch
 ```
 
-Tests cover:
+| Test File | Coverage |
+|---|---|
+| `tests/webhook.test.js` | Signature validation, queuing, API responses |
+| `tests/worker.test.js` | Job processing, retry logic, DLQ routing |
 
-- Webhook signature validation
-- Job queue processing
-- Worker reliability
-- Error handling and Dead-Letter Queue behavior
+---
 
-Test files are located in the `tests/` directory.
+## 📋 Logging
+
+All services use structured JSON logging via **Winston**.
+
+| Log File | Contents |
+|---|---|
+| `logs/combined.log` | All log levels (info, warn, error, debug) |
+| `logs/error.log` | Error-level logs only |
+| Console | Dev mode only (`NODE_ENV !== production`) |
+
+Log entries include a `timestamp`, `level`, and `message` field for easy parsing.
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'feat: add my feature'`
+4. Push to the branch: `git push origin feature/my-feature`
+5. Open a Pull Request.

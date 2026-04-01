@@ -33,7 +33,7 @@ const main = async () => {
   const type = process.argv[2] || "invalid-json";
   try {
     if (type === "invalid-json") {
-      // This will cause JSON.parse to throw an error in the worker
+      // This will cause JSON.parse to throw an error in the workerlll
       await pushInvalidJson();
     } else if (type === "bad-payload") {
       await pushBadPayload();
@@ -52,7 +52,7 @@ const main = async () => {
   } finally {
     try {
       await redisClient.quit();
-    } catch (_) {}
+    } catch (_) { }
   }
   process.exit(0);
 };
