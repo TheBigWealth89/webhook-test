@@ -59,8 +59,7 @@ const inspectDeadLetterQueue = async () => {
       }
       if (argv.retry < 0 || argv.retry >= length) {
         console.log(
-          `Error: Invalid job index ${argv.retry}. Must be between 0 and ${
-            length - 1
+          `Error: Invalid job index ${argv.retry}. Must be between 0 and ${length - 1
           }`
         );
         return;

@@ -38,10 +38,10 @@ class QueueService {
 
   async pollDelayedJobs() {
     const now = Date.now();
-    
+
     // Attempting atomic fetch and process using pipelining
     const jobs = await redisClient.zrangebyscore(QUEUES.DELAYED, 0, now);
-    
+
     if (jobs && jobs.length > 0) {
       const pipeline = redisClient.pipeline();
       jobs.forEach((jobString) => {

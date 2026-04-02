@@ -8,9 +8,9 @@ export const redisClient = new redis(redisUrl, {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
   // rejectUnauthorized is not a valid option at this level, move to tls
-    tls: (redisUrl && redisUrl.startsWith("rediss://"))
-      ? { rejectUnauthorized: false }
-      : undefined,
+  tls: (redisUrl && redisUrl.startsWith("rediss://"))
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 redisClient.on("connect", () =>
@@ -24,7 +24,7 @@ redisClient.on("error", (err) => console.error("❌ Redis Error:", err));
 let isConnected = false;
 export const connectToRedis = async () => {
   if (isConnected) return;
-  
+
   if (redisClient.status === "ready") {
     isConnected = true;
     return;
