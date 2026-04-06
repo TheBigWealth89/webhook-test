@@ -8,6 +8,7 @@ const QUEUES = {
   DLQ: "dead_letter_queue",
 };
 
+// Ensure the blocking client is connected before using 
 class QueueService {
   async pushJob(job) {
     await redisClient.lpush(QUEUES.MAIN, JSON.stringify(job));
