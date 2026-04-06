@@ -1,8 +1,14 @@
 import redis from "ioredis";
-import "dotenv/config";
+
+if (process.env.NODE_ENV !== "production") {
+  await import("dotenv/config");
+}
 
 const redisUrl = process.env.REDIS_URL;
-console.log("🔗 Redis URL:", redisUrl);
+
+if (!redisUrl) {
+  throw new Error("REDIS_URL is not set");
+}
 
 export const redisClient = new redis(redisUrl, {
   maxRetriesPerRequest: null,

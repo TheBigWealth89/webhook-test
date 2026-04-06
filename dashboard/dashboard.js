@@ -21,6 +21,11 @@ app.use(express.static(path.join(__dirname, "public")));
 // Parse form submissions
 app.use(express.urlencoded({ extended: true }));
 
+// Redirect root to dashboard
+app.get("/", (req, res) => {
+  res.redirect("/dashboard");
+});
+
 // Dashboard route
 app.get("/dashboard", async (req, res) => {
   try {
@@ -104,8 +109,8 @@ app.post("/retry-job/:index", async (req, res) => {
 
 (async () => {
   try {
-    app.listen(PORT, () => {
-      console.log(`Dashboard running on http://localhost:${PORT}`);
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Dashboard running on http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start dashboard:", error.message);

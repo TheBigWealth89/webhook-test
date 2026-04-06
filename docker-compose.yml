@@ -1,16 +1,4 @@
 services:
-  # Redis Service
-  redis:
-    image: redis:alpine
-    container_name: webhook-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - webhook-network
-    restart: always
-
   # Job Producer (API) Service
   api:
     build:
@@ -21,8 +9,7 @@ services:
       - .docker.env
     ports:
       - "8000:7000"
-    depends_on:
-      - redis
+
     networks:
       - webhook-network
     restart: unless-stopped
@@ -35,8 +22,7 @@ services:
     container_name: webhook-worker
     env_file:
       - .docker.env
-    depends_on:
-      - redis
+
     networks:
       - webhook-network
     restart: unless-stopped
@@ -51,8 +37,7 @@ services:
       - .docker.env
     ports:
       - "8001:7001"
-    depends_on:
-      - redis
+
     networks:
       - webhook-network
     restart: unless-stopped
@@ -60,6 +45,3 @@ services:
 networks:
   webhook-network:
     driver: bridge
-
-volumes:
-  redis_data:
